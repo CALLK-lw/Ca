@@ -3,38 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Xvelo Engine - Scene Save & Smoothness Update</title>
+    <title>Apex Engine - Mobile Controls & Build Edition</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     
     <style>
         :root {
-            --bg-darker: #121214;
-            --bg-dark: #1e1e20;
-            --bg-medium: #2a2a2c;
-            --bg-light: #3a3a3c;
-            --accent: #007acc;
+            --bg-darker: #16181d;
+            --bg-dark: #202531;
+            --bg-medium: #2b3040;
+            --bg-light: #3b4257;
+            --accent: #4e8cea;
             --accent-green: #2ecc71;
-            --text-main: #cccccc;
-            --text-bright: #ffffff;
-            --border: #333335;
+            --text-main: #b8bcc7;
+            --text-bright: #eef0f5;
+            --border: #12141a;
             --play-color: #4ec9b0;
             --stop-color: #f14c4c;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; }
-        body { background-color: var(--bg-darker); color: var(--text-main); overflow: hidden; height: 100vh; width: 100vw; touch-action: none; }
+        body { background-color: var(--bg-darker); color: var(--text-main); overflow: hidden; height: 100vh; width: 100vw; }
 
         /* Dashboard */
-        #projects-dashboard { width: 100%; height: 100%; display: flex; flex-direction: column; background: #121214; z-index: 100; position: absolute; top: 0; left: 0; }
+        #projects-dashboard { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg-darker); z-index: 100; position: absolute; top: 0; left: 0; }
         .dashboard-header { height: 50px; background: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
         .dashboard-content { flex: 1; padding: 20px; overflow-y: auto; max-width: 1000px; margin: 0 auto; width: 100%; }
-        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
-        .project-card { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
-        .project-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 4px; background: #000; }
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .project-card { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 
         /* Engine Editor */
         #engine-editor { display: none; flex-direction: column; height: 100vh; width: 100vw; transition: all 0.3s; }
+
+        /* Godot-style top menu bar (Scene / Project / Debug / Editor) */
+        #menu-bar { height: 26px; background-color: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 2px; padding: 0 8px; z-index: 11; }
+        .menu-item { padding: 3px 10px; color: var(--text-main); border-radius: 3px; cursor: pointer; }
+        .menu-item:hover { background: var(--bg-light); color: var(--text-bright); }
+
+        /* Godot-style mode tabs (2D / 3D / Script / AssetLib) */
+        #mode-tabs { height: 30px; background-color: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 4px; z-index: 11; }
+        .mode-tab { padding: 4px 14px; border-radius: 3px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .mode-tab.active { background: var(--bg-light); color: var(--text-bright); }
+        .mode-tab.disabled { opacity: 0.4; cursor: default; }
+
         #toolbar { height: 40px; background-color: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 10; }
         .tool-group { display: flex; gap: 4px; align-items: center; }
 
@@ -42,56 +53,88 @@
         .btn:hover { background: var(--bg-light); color: var(--text-bright); }
         .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
         .btn-green { background: #27ae60; color: white; border: none; }
-        .btn-danger { background: var(--stop-color); color: white; border: none; }
+        .btn-green:hover { background: #2ea043; }
         
         #workspace { flex: 1; display: grid; grid-template-columns: 220px 1fr 280px; grid-template-rows: 1fr 180px; grid-template-areas: "hierarchy viewport inspector" "project viewport inspector"; gap: 2px; background-color: var(--border); }
         .panel { background-color: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .panel-header { background-color: var(--bg-medium); padding: 6px 10px; font-weight: bold; color: var(--text-bright); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .panel-content { flex: 1; overflow-y: auto; padding: 8px; }
 
+        /* Godot-style filter/search box used in Scene, FileSystem and Inspector panels */
+        .filter-box { display: flex; align-items: center; gap: 6px; background: var(--bg-darker); border: 1px solid var(--border); border-radius: 3px; padding: 3px 6px; margin-bottom: 6px; }
+        .filter-box input { background: transparent; border: none; color: var(--text-bright); flex: 1; padding: 2px; }
+        .filter-box input:focus { outline: none; }
+        .filter-box i { color: var(--text-main); }
+
         #hierarchy-panel { grid-area: hierarchy; }
+        .scene-tab-headers { display: flex; border-bottom: 1px solid var(--border); }
+        .scene-tab-headers .tab-btn { flex: 1; text-align: center; }
         .tree-item { padding: 6px 8px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
         .tree-item:hover { background-color: var(--bg-light); }
         .tree-item.selected { background-color: var(--accent); color: white; }
-        .tree-item .del-btn { color: #ff6b6b; cursor: pointer; opacity: 0.7; }
-        .tree-item .del-btn:hover { opacity: 1; }
 
         #viewport-panel { grid-area: viewport; position: relative; background-color: #000; }
         #canvas-container { width: 100%; height: 100%; }
+
+        /* Godot-style viewport sub-toolbar (Transform / View) + Perspective label + axis gizmo */
+        #viewport-subbar { position: absolute; top: 0; left: 0; width: 100%; display: flex; align-items: center; gap: 10px; padding: 4px 8px; z-index: 5; background: linear-gradient(to bottom, rgba(20,22,28,0.55), transparent); pointer-events: none; }
+        #viewport-subbar .btn, #viewport-subbar span { pointer-events: auto; }
+        #perspective-label { background: rgba(20,22,28,0.55); padding: 3px 8px; border-radius: 3px; color: var(--text-bright); display: flex; align-items: center; gap: 5px; }
+        #axis-gizmo { position: absolute; top: 8px; right: 12px; width: 54px; height: 54px; z-index: 5; pointer-events: none; }
 
         #inspector-panel { grid-area: inspector; }
         #project-panel { grid-area: project; }
 
         .tab-headers { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-medium); }
-        .tab-btn { padding: 6px 12px; cursor: pointer; color: var(--text-main); border-right: 1px solid var(--border); flex: 1; text-align: center; }
+        .tab-btn { padding: 6px 12px; cursor: pointer; color: var(--text-main); border-right: 1px solid var(--border); }
         .tab-btn.active { background: var(--bg-dark); color: var(--text-bright); border-bottom: 2px solid var(--accent); }
 
         .prop-group { background: var(--bg-medium); border-radius: 4px; padding: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
         .prop-title { font-weight: bold; color: var(--text-bright); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
-        .prop-row { display: flex; align-items: center; margin-bottom: 6px; gap: 6px; }
-        .prop-row label { width: 100px; color: var(--text-main); }
+        .prop-row { display: flex; align-items: center; margin-bottom: 4px; gap: 6px; }
+        .prop-row label { width: 90px; color: var(--text-main); }
         input[type="text"], input[type="number"], input[type="color"], select, textarea { background: var(--bg-darker); border: 1px solid var(--border); color: var(--text-bright); padding: 4px 6px; border-radius: 3px; width: 100%; }
 
+        /* Multi-Script UI Elements */
         .script-tag { display: flex; justify-content: space-between; align-items: center; background: var(--bg-darker); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; }
         .script-tag-remove { color: var(--stop-color); cursor: pointer; margin-left: 6px; }
 
+        /* Dropdown Menu */
         #add-menu-dropdown { position: absolute; top: 30px; right: 8px; background: var(--bg-medium); border: 1px solid var(--border); border-radius: 4px; display: none; flex-direction: column; width: 160px; z-index: 1000; }
         #add-menu-dropdown.show { display: flex; }
         .dropdown-item { padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .dropdown-item:hover { background: var(--accent); color: white; }
         .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
+        /* Godot-style bottom status bar (Output / Debugger / Audio / Animation / Shader Editor) */
+        #bottom-bar { height: 26px; background-color: var(--bg-dark); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 10; }
+        #bottom-bar .tool-group { gap: 14px; }
+        #bottom-bar .menu-item { padding: 3px 4px; }
+        #bottom-bar .version-tag { color: #6b7280; }
+
+        /* Play Mode UI Overlay & Mobile Controls */
         #play-overlay { display: none; position: absolute; top: 10px; left: 10px; z-index: 1000; }
-        body.playing #toolbar, body.playing #hierarchy-panel, body.playing #inspector-panel, body.playing #project-panel { display: none !important; }
+        body.playing #menu-bar, body.playing #mode-tabs, body.playing #toolbar, body.playing #hierarchy-panel, body.playing #inspector-panel, body.playing #project-panel, body.playing #bottom-bar, body.playing #viewport-subbar, body.playing #axis-gizmo { display: none !important; }
         body.playing #workspace { grid-template-columns: 1fr; grid-template-rows: 1fr; grid-template-areas: "viewport"; }
         body.playing #play-overlay { display: flex; }
-        body.playing #mobile-ui { display: none; }
-        body.playing.has-button-script #mobile-ui { display: block !important; }
+        body.playing #mobile-ui { display: block !important; }
 
-        #mobile-ui { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
-        #joystick-zone { position: absolute; bottom: 25px; left: 25px; width: 130px; height: 130px; pointer-events: auto; z-index: 1001; }
-        #jump-btn { position: absolute; bottom: 35px; right: 30px; width: 70px; height: 70px; background: rgba(0,122,204,0.6); border: 2px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; pointer-events: auto; backdrop-filter: blur(4px); z-index: 1001; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #mobile-ui { display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; pointer-events: auto; }
+        #jump-btn { position: absolute; bottom: 35px; right: 30px; width: 65px; height: 65px; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; pointer-events: auto; backdrop-filter: blur(4px); }
+        #jump-btn:active { background: rgba(0, 122, 204, 0.6); }
 
+        /* Loading Screen (Splash Screen) */
+        #splash-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0e; z-index: 3000; flex-direction: column; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.5s ease; }
+        #splash-screen img { width: 130px; height: 130px; animation: pulseLogo 1.5s infinite alternate; }
+        #splash-screen h1 { color: #ffffff; font-size: 24px; margin-top: 15px; letter-spacing: 2px; }
+        .loading-bar { width: 200px; height: 4px; background: #222; margin-top: 20px; border-radius: 2px; overflow: hidden; }
+        .loading-progress { width: 0%; height: 100%; background: #4eef80; animation: fillProgress 1.2s forwards; }
+
+        @keyframes pulseLogo { 0% { transform: scale(0.95); opacity: 0.8; } 100% { transform: scale(1.05); opacity: 1; } }
+        @keyframes fillProgress { 0% { width: 0%; } 100% { width: 100%; } }
+
+        /* Script Modal */
         #script-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; width: 600px; height: 400px; display: flex; flex-direction: column; padding: 15px; gap: 10px; }
     </style>
@@ -107,12 +150,25 @@
 </head>
 <body>
 
-    <input type="file" id="fbx-file-input" accept=".fbx" style="display:none;">
+    <!-- 🌟 Splash Screen (صفحة اللودينغ) -->
+    <div id="splash-screen">
+        <!-- SVG لشعار Apex Engine -->
+        <svg width="130" height="130" viewBox="0 0 300 300">
+            <rect width="300" height="300" fill="#000000"/>
+            <path d="M 65 90 L 115 150 L 65 210 L 105 210 L 135 170 L 165 210 L 205 210 L 155 150 L 205 90 L 165 90 L 135 130 L 105 90 Z" fill="#66cc33" stroke="#ffffff" stroke-width="6"/>
+            <path d="M 60 80 Q 80 50 100 80 Q 75 95 60 80 Z" fill="#ffffff" stroke="#336611" stroke-width="3"/>
+            <path d="M 170 80 Q 190 50 210 80 Q 185 95 170 80 Z" fill="#ffffff" stroke="#336611" stroke-width="3"/>
+            <path d="M 85 65 Q 105 35 125 65 Q 100 80 85 65 Z" fill="#ffffff" stroke="#336611" stroke-width="3"/>
+            <path d="M 145 65 Q 165 35 185 65 Q 160 80 145 65 Z" fill="#ffffff" stroke="#336611" stroke-width="3"/>
+        </svg>
+        <h1>Apex Engine</h1>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
+    </div>
 
-    <!-- Dashboard -->
+    <!-- 1️⃣ Dashboard -->
     <div id="projects-dashboard">
         <div class="dashboard-header">
-            <span style="font-size: 14px; font-weight: bold;"><i class="fa-solid fa-cube" style="color: var(--accent)"></i> Xvelo Engine</span>
+            <span style="font-size: 14px; font-weight: bold;"><i class="fa-solid fa-cube" style="color: var(--accent)"></i> Apex Engine</span>
         </div>
         <div class="dashboard-content">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -123,12 +179,27 @@
         </div>
     </div>
 
-    <!-- Engine Editor -->
+    <!-- 2️⃣ Engine Editor -->
     <div id="engine-editor">
+        <!-- شريط القوائم العلوي بمظهر Godot (شكلي، لا يمس أي وظيفة موجودة) -->
+        <div id="menu-bar">
+            <span class="menu-item">Scene</span>
+            <span class="menu-item">Project</span>
+            <span class="menu-item">Debug</span>
+            <span class="menu-item">Editor</span>
+        </div>
+
+        <!-- شريط أوضاع العرض بمظهر Godot: 2D / 3D / Script / AssetLib -->
+        <div id="mode-tabs">
+            <span class="mode-tab disabled" title="غير متاح في هذا المحرك"><i class="fa-solid fa-square"></i> 2D</span>
+            <span class="mode-tab active" title="عرض ثلاثي الأبعاد (الوضع الحالي)"><i class="fa-solid fa-cube"></i> 3D</span>
+            <span class="mode-tab disabled" title="غير متاح في هذا المحرك"><i class="fa-solid fa-code"></i> Script</span>
+            <span class="mode-tab disabled" title="غير متاح في هذا المحرك"><i class="fa-solid fa-box-open"></i> AssetLib</span>
+        </div>
+
         <div id="toolbar">
             <div class="tool-group">
                 <button class="btn" id="btn-back"><i class="fa-solid fa-arrow-left"></i> المشاريع</button>
-                <button class="btn btn-green" id="btn-save-scene"><i class="fa-solid fa-floppy-disk"></i> حفظ المشهد</button>
                 <span id="proj-title-display" style="font-weight: bold; margin-left: 10px; color: white;">Project</span>
             </div>
 
@@ -144,55 +215,116 @@
         </div>
 
         <div id="workspace">
+            <!-- Hierarchy / Scene -->
             <div class="panel" id="hierarchy-panel">
+                <div class="scene-tab-headers">
+                    <div class="tab-btn active">Scene</div>
+                    <div class="tab-btn">Import</div>
+                </div>
                 <div class="panel-header">
-                    <span>Hierarchy</span>
+                    <span>Create Root Node:</span>
                     <button class="btn" id="btn-open-add" style="padding: 2px 6px;"><i class="fa-solid fa-plus"></i></button>
                     <div id="add-menu-dropdown">
                         <div class="dropdown-item" data-type="Cube"><i class="fa-solid fa-cube"></i> Cube</div>
                         <div class="dropdown-item" data-type="Sphere"><i class="fa-solid fa-circle"></i> Sphere</div>
                         <div class="dropdown-item" data-type="Floor"><i class="fa-solid fa-square"></i> Floor</div>
                         <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" data-type="Player"><i class="fa-solid fa-user"></i> Player</div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-item" data-type="FBX"><i class="fa-solid fa-file-import"></i> FBX Model</div>
+                        <div class="dropdown-item" data-type="Player"><i class="fa-solid fa-user"></i> Player Object</div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item" data-type="DirLight"><i class="fa-solid fa-sun"></i> Directional Light</div>
+                        <div class="dropdown-item" data-type="PointLight"><i class="fa-solid fa-lightbulb"></i> Point Light</div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="btn-import-fbx"><i class="fa-solid fa-file-import"></i> استيراد FBX Model</div>
                     </div>
                 </div>
-                <div class="panel-content" id="hierarchy-list"></div>
+                <div class="panel-content">
+                    <div class="filter-box">
+                        <i class="fa-solid fa-filter"></i>
+                        <input type="text" id="hierarchy-filter" placeholder="Filter by Name">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <div id="hierarchy-list"></div>
+                </div>
             </div>
 
+            <!-- Viewport -->
             <div class="panel" id="viewport-panel">
                 <div id="canvas-container"></div>
-                <div id="play-overlay">
-                    <button class="btn" id="btn-stop" style="background: var(--stop-color); color: white;"><i class="fa-solid fa-stop"></i> الخروج (ESC)</button>
+
+                <!-- شريط أدوات فرعي داخل الفيوبورت بمظهر Godot -->
+                <div id="viewport-subbar">
+                    <span id="perspective-label"><i class="fa-solid fa-video"></i> Perspective</span>
+                    <span style="color:#8a8f9c;">Transform</span>
+                    <span style="color:#8a8f9c;">View</span>
                 </div>
+                <!-- مؤشر المحاور الصغير أعلى يمين الفيوبورت (شكلي مطابق لـ Godot) -->
+                <svg id="axis-gizmo" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="46" fill="rgba(30,32,40,0.35)"/>
+                    <line x1="50" y1="50" x2="82" y2="50" stroke="#ff5c5c" stroke-width="4"/>
+                    <circle cx="82" cy="50" r="7" fill="#ff5c5c"/>
+                    <line x1="50" y1="50" x2="50" y2="18" stroke="#7ed957" stroke-width="4"/>
+                    <circle cx="50" cy="18" r="7" fill="#7ed957"/>
+                    <line x1="50" y1="50" x2="28" y2="72" stroke="#4e8cea" stroke-width="4"/>
+                    <circle cx="28" cy="72" r="7" fill="#4e8cea"/>
+                </svg>
+
+                <div id="play-overlay">
+                    <button class="btn" id="btn-stop" style="background: var(--stop-color); color: white;"><i class="fa-solid fa-stop"></i> الخروج من اللعبة (ESC)</button>
+                </div>
+                <!-- Mobile Touch Controls UI -->
                 <div id="mobile-ui">
                     <div id="joystick-zone"></div>
                     <div id="jump-btn">JUMP</div>
                 </div>
             </div>
 
+            <!-- Inspector & Settings -->
             <div class="panel" id="inspector-panel">
                 <div class="tab-headers">
                     <div class="tab-btn active" id="tab-inspector">Inspector</div>
                     <div class="tab-btn" id="tab-settings">Project Settings</div>
                 </div>
-                <div class="panel-content" id="inspector-content"></div>
+                <div class="panel-content">
+                    <div class="filter-box">
+                        <i class="fa-solid fa-filter"></i>
+                        <input type="text" id="inspector-filter" placeholder="Filter Properties">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <div id="inspector-content"></div>
+                </div>
             </div>
 
+            <!-- Scripts Manager (FileSystem) -->
             <div class="panel" id="project-panel">
                 <div class="panel-header">
-                    <span>السكربتات والمكتبة (Scripts)</span>
+                    <span><i class="fa-solid fa-folder-tree"></i> FileSystem — السكربتات (Scripts)</span>
                     <button class="btn" id="btn-new-script" style="padding: 2px 6px;"><i class="fa-solid fa-plus"></i> سكربت جديد</button>
                 </div>
-                <div class="panel-content" id="scripts-list"></div>
+                <div class="panel-content">
+                    <div class="filter-box">
+                        <i class="fa-solid fa-filter"></i>
+                        <input type="text" id="scripts-filter" placeholder="Filter Files">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <div id="scripts-list"></div>
+                </div>
             </div>
+        </div>
+
+        <!-- الشريط السفلي بمظهر Godot -->
+        <div id="bottom-bar">
+            <div class="tool-group">
+                <span class="menu-item"><i class="fa-solid fa-circle" style="color:#4e8cea; font-size:6px;"></i> Output</span>
+                <span class="menu-item">Debugger</span>
+                <span class="menu-item">Audio</span>
+                <span class="menu-item">Animation</span>
+                <span class="menu-item">Shader Editor</span>
+            </div>
+            <span class="version-tag">Apex Engine v1.0</span>
         </div>
     </div>
 
-    <!-- Script Modal -->
+    <!-- Script Editor Modal -->
     <div id="script-modal">
         <div class="modal-content">
             <h3 style="color: white;"><i class="fa-solid fa-code"></i> محرر السكربت</h3>
@@ -205,46 +337,47 @@
         </div>
     </div>
 
+    <input type="file" id="fbx-file-input" accept=".fbx" style="display: none;">
+
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
         import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
-        let projects = JSON.parse(localStorage.getItem('xvelo_projs_v3')) || [];
+        let projects = JSON.parse(localStorage.getItem('apex_projs')) || [{ id: 'p1', name: 'لعبتي الأولى' }];
         let currentProj = null;
 
+        // متغيّرات أدوات تحكم الهاتف
         let joystickVector = { x: 0, y: 0 };
-        let isJumpTriggered = false;
-        
-        let camTouchYaw = 0;
-        let camTouchPitch = 0.3;
-        let isTouchingCam = false;
-        let activeCamTouchId = null;
-        let lastTouchX = 0, lastTouchY = 0;
+        let isJumpPressed = false;
 
-        let lastFrameTime = 0;
-
+        // مكتبة السكربتات المتاحة
+        // ملاحظة: الجاذبية الأساسية أصبحت مدمجة في المحرك نفسه (انظر animate())
+        // وتُطبَّق تلقائياً على أي كائن من نوع Player. سكربت "SolidGround.js" هو
+        // المسؤول عن اكتشاف الأرضيات الصلبة الحقيقية في المشهد وإيقاف السقوط
+        // عندما يقف اللاعب فوقها. إن لم يكن هذا السكربت مربوطاً باللاعب، فسيستمر
+        // اللاعب بالسقوط لأن لا شيء يوقف الجاذبية الأساسية.
         let scripts = [
-            {
-                id: 'sc_solid_ground',
-                name: 'SolidGround.js',
-                code: `// يجعل العنصر أرضية صلبة لعدم السقوط\ngo.isSolidGround = true;\nif (go.verticalVelocity !== undefined) go.verticalVelocity = 0;`
+            { 
+                id: 'sc_mobile', 
+                name: 'MobileControls.js', 
+                code: '// تحريك اللاعب أفقياً عبر الجويستيك (تحكم الهاتف فقط، بدون جاذبية)\ngo.group.position.x += joystickVector.x * 0.1;\ngo.group.position.z += joystickVector.y * 0.1;'
             },
             { 
-                id: 'sc_player_pc', 
-                name: 'PlayerPCMovement.js', 
-                code: `// تحكم الحاسوب (الكيبورد WASD + Space للقفز)\nif(go.verticalVelocity === undefined) go.verticalVelocity = 0;\n\nlet inputX = 0;\nlet inputZ = 0;\n\nif(keys["KeyW"] || keys["ArrowUp"]) inputZ = -1;\nif(keys["KeyS"] || keys["ArrowDown"]) inputZ = 1;\nif(keys["KeyA"] || keys["ArrowLeft"]) inputX = -1;\nif(keys["KeyD"] || keys["ArrowRight"]) inputX = 1;\n\nlet speed = 0.12;\n\nif (inputX !== 0 || inputZ !== 0) {\n    let moveAngle = Math.atan2(inputX, inputZ) + camTouchYaw;\n    go.group.position.x += Math.sin(moveAngle) * speed;\n    go.group.position.z += Math.cos(moveAngle) * speed;\n    go.group.rotation.y = moveAngle;\n}\n\nlet raycaster = new THREE.Raycaster();\nlet downVector = new THREE.Vector3(0, -1, 0);\nraycaster.set(go.group.position, downVector);\n\nlet intersects = raycaster.intersectObjects(scene.children, true);\nlet solidHit = intersects.find(hit => hit.distance < 1.1 && hit.object !== go.mesh);\n\nif(solidHit) {\n    let hitParent = gameObjects.find(o => o.group === solidHit.object.parent || o.mesh === solidHit.object || o.group.children.includes(solidHit.object));\n    if (hitParent && hitParent.isSolidGround) {\n        go.group.position.y = solidHit.point.y + 0.5;\n        go.verticalVelocity = 0;\n        if(keys["Space"]) {\n            go.verticalVelocity = 0.22;\n        }\n    } else {\n        go.verticalVelocity -= 0.012;\n        go.group.position.y += go.verticalVelocity;\n    }\n} else {\n    go.verticalVelocity -= 0.012;\n    go.group.position.y += go.verticalVelocity;\n}` 
-            },
-            {
-                id: 'sc_button_controls',
-                name: 'ButtonControls.js',
-                code: `// تحكم أزرار الجوال (الجويستيك + زر القفز)\nif(go.verticalVelocity === undefined) go.verticalVelocity = 0;\n\nlet speed = 0.12;\nlet inputX = joystickVector.x;\nlet inputZ = -joystickVector.y;\n\nif (Math.abs(inputX) > 0.05 || Math.abs(inputZ) > 0.05) {\n    let moveAngle = Math.atan2(inputX, inputZ) + camTouchYaw;\n    go.group.position.x += Math.sin(moveAngle) * speed;\n    go.group.position.z += Math.cos(moveAngle) * speed;\n    go.group.rotation.y = moveAngle;\n}\n\nlet raycaster = new THREE.Raycaster();\nlet downVector = new THREE.Vector3(0, -1, 0);\nraycaster.set(go.group.position, downVector);\n\nlet intersects = raycaster.intersectObjects(scene.children, true);\nlet solidHit = intersects.find(hit => hit.distance < 1.1 && hit.object !== go.mesh);\n\nif(solidHit) {\n    let hitParent = gameObjects.find(o => o.group === solidHit.object.parent || o.mesh === solidHit.object || o.group.children.includes(solidHit.object));\n    if (hitParent && hitParent.isSolidGround) {\n        go.group.position.y = solidHit.point.y + 0.5;\n        go.verticalVelocity = 0;\n        if(isJumpTriggered) {\n            go.verticalVelocity = 0.24;\n            isJumpTriggered = false;\n        }\n    } else {\n        go.verticalVelocity -= 0.012;\n        go.group.position.y += go.verticalVelocity;\n    }\n} else {\n    go.verticalVelocity -= 0.012;\n    go.group.position.y += go.verticalVelocity;\n}`
+                id: 'sc_player', 
+                name: 'PlayerKeyboard.js', 
+                code: '// حركة الكيبورد الأفقية فقط (بدون جاذبية)\nif(keys["KeyW"]) go.group.position.z -= 0.1;\nif(keys["KeyS"]) go.group.position.z += 0.1;\nif(keys["KeyA"]) go.group.position.x -= 0.1;\nif(keys["KeyD"]) go.group.position.x += 0.1;'
             },
             { 
-                id: 'sc_cam_360', 
-                name: 'Camera360Follow.js', 
-                code: `// تتبع كاميرا 360 درجة\nlet radius = 7;\nlet targetPos = go.group.position;\n\nlet x = targetPos.x + radius * Math.sin(camTouchYaw) * Math.cos(camTouchPitch);\nlet y = targetPos.y + radius * Math.sin(camTouchPitch) + 1.2;\nlet z = targetPos.z + radius * Math.cos(camTouchYaw) * Math.cos(camTouchPitch);\n\ncamera.position.set(x, y, z);\ncamera.lookAt(targetPos.x, targetPos.y + 0.5, targetPos.z);` 
+                id: 'sc_solid_ground', 
+                name: 'SolidGround.js', 
+                code: '// أرض صلبة حقيقية: يوقف سقوط اللاعب فقط إذا وُجدت أرضية (Floor) صلبة\n// تحته فعلاً في المشهد. إن لم يوجد سكربت كهذا مربوط باللاعب، الجاذبية\n// الأساسية في المحرك ستجعله يسقط بلا توقف.\nconst box = new THREE.Box3().setFromObject(go.mesh || go.group);\nconst feetY = box.min.y;\nconst footOffset = go.group.position.y - feetY; // المسافة بين مركز اللاعب وقدميه\nconst groundY = getGroundY(go.group.position.x, go.group.position.z);\n\nif (groundY > -Infinity && feetY <= groundY + 0.05 && go.velocityY <= 0) {\n    // اللاعب فوق أرضية صلبة: تثبيته فوقها مباشرة\n    go.group.position.y = groundY + footOffset;\n    go.velocityY = 0;\n    go.grounded = true;\n\n    // القفز (من زر الهاتف أو مفتاح المسافة في الكيبورد)\n    if (isJumpPressed || keys["Space"]) {\n        go.velocityY = 0.28;\n        go.grounded = false;\n    }\n} else {\n    go.grounded = false;\n}'
+            },
+            {
+                id: 'sc_camera_orbit',
+                name: 'CameraOrbit360.js',
+                code: '// دوران الكاميرا 360 درجة حول اللاعب مع تتبعه تلقائياً\nif (typeof go.camAngle !== "number") go.camAngle = 0;\nconst radius = 8;\nconst height = 4;\nconst rotSpeed = 0.006;\n\ngo.camAngle += rotSpeed;\ncamera.position.x = go.group.position.x + Math.cos(go.camAngle) * radius;\ncamera.position.z = go.group.position.z + Math.sin(go.camAngle) * radius;\ncamera.position.y = go.group.position.y + height;\ncamera.lookAt(go.group.position.x, go.group.position.y + 1, go.group.position.z);'
             }
         ];
 
@@ -256,41 +389,11 @@
         let keys = {};
         let editingScriptId = null;
         let joystickManager = null;
+        const fbxLoader = new FBXLoader();
 
         function saveProjects() {
-            localStorage.setItem('xvelo_projs_v3', JSON.stringify(projects));
+            localStorage.setItem('apex_projs', JSON.stringify(projects));
             renderDashboard();
-        }
-
-        // حفظ المشهد الحالي للمشروع
-        function saveCurrentSceneData() {
-            if (!currentProj) return;
-            const sceneData = gameObjects.map(go => {
-                let colorHex = "#007acc";
-                if(go.mesh && go.mesh.material && go.mesh.material.color) {
-                    colorHex = "#" + go.mesh.material.color.getHexString();
-                }
-                return {
-                    id: go.id,
-                    name: go.name,
-                    type: go.type,
-                    isSolidGround: go.isSolidGround,
-                    scriptIds: go.scriptIds || [],
-                    colorHex: colorHex,
-                    position: { x: go.group.position.x, y: go.group.position.y, z: go.group.position.z },
-                    rotation: { x: go.group.rotation.x, y: go.group.rotation.y, z: go.group.rotation.z },
-                    scale: { x: go.group.scale.x, y: go.group.scale.y, z: go.group.scale.z }
-                };
-            });
-            currentProj.sceneObjects = sceneData;
-            saveProjects();
-        }
-
-        function loadCurrentSceneData() {
-            if (!currentProj || !currentProj.sceneObjects) return;
-            currentProj.sceneObjects.forEach(data => {
-                addObject(data.type, data);
-            });
         }
 
         function renderDashboard() {
@@ -300,9 +403,8 @@
                 const card = document.createElement('div');
                 card.className = 'project-card';
                 card.innerHTML = `
-                    <img src="${p.icon || 'https://via.placeholder.com/200x100?text=Xvelo+Game'}" alt="cover">
-                    <div style="font-weight:bold; color:white;"><i class="fa-solid fa-gamepad"></i> ${p.name}</div>
-                    <div style="display:flex; gap:5px; margin-top:5px;">
+                    <div style="font-weight:bold; color:white;"><i class="fa-solid fa-cube"></i> ${p.name}</div>
+                    <div style="display:flex; gap:5px; margin-top:10px;">
                         <button class="btn active" style="flex:1; justify-content:center;">فتح</button>
                         <button class="btn btn-del" style="color:var(--stop-color);"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -318,25 +420,23 @@
 
         function openEngine(proj) {
             currentProj = proj;
-            if(!currentProj.fpsLimit) currentProj.fpsLimit = 60; // الافتراضي 60 FPS للسلاسة
-            
             document.getElementById('proj-title-display').innerText = proj.name;
             document.getElementById('projects-dashboard').style.display = 'none';
             document.getElementById('engine-editor').style.display = 'flex';
             
-            initThree();
-            loadCurrentSceneData();
-            initJoystick();
-            init360CameraTouch();
+            if(!scene) initThree();
             renderScriptsUI();
             resize();
         }
 
         function initJoystick() {
-            const zone = document.getElementById('joystick-zone');
-            zone.innerHTML = '';
-
-            const options = { zone: zone, mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 90 };
+            const options = {
+                zone: document.getElementById('joystick-zone'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white',
+                size: 90
+            };
             
             if(joystickManager) joystickManager.destroy();
             joystickManager = nipplejs.create(options);
@@ -344,69 +444,23 @@
             joystickManager.on('move', (evt, data) => {
                 if (data && data.vector) {
                     joystickVector.x = data.vector.x;
-                    joystickVector.y = data.vector.y;
+                    joystickVector.y = -data.vector.y;
                 }
             });
 
-            joystickManager.on('end', () => { joystickVector = { x: 0, y: 0 }; });
+            joystickManager.on('end', () => {
+                joystickVector = { x: 0, y: 0 };
+            });
 
             const jumpBtn = document.getElementById('jump-btn');
-            const triggerJump = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                isJumpTriggered = true;
-            };
-            jumpBtn.onpointerdown = triggerJump;
-            jumpBtn.ontouchstart = triggerJump;
-        }
-
-        function init360CameraTouch() {
-            const viewport = document.getElementById('viewport-panel');
-            viewport.addEventListener('touchstart', (e) => {
-                if(!isPlaying) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    let t = e.changedTouches[i];
-                    if (t.clientX > window.innerWidth / 3) {
-                        isTouchingCam = true;
-                        activeCamTouchId = t.identifier;
-                        lastTouchX = t.clientX; lastTouchY = t.clientY;
-                        break;
-                    }
-                }
-            });
-
-            viewport.addEventListener('touchmove', (e) => {
-                if(!isPlaying || !isTouchingCam) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    let t = e.changedTouches[i];
-                    if (t.identifier === activeCamTouchId) {
-                        let dx = t.clientX - lastTouchX;
-                        let dy = t.clientY - lastTouchY;
-                        camTouchYaw -= dx * 0.006;
-                        camTouchPitch = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, camTouchPitch + dy * 0.006));
-                        lastTouchX = t.clientX; lastTouchY = t.clientY;
-                        break;
-                    }
-                }
-            });
-
-            const resetTouch = (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === activeCamTouchId) {
-                        isTouchingCam = false; activeCamTouchId = null;
-                        break;
-                    }
-                }
-            };
-            viewport.addEventListener('touchend', resetTouch);
-            viewport.addEventListener('touchcancel', resetTouch);
+            // ملاحظة: isJumpPressed يُصفَّر مرة واحدة فقط في نهاية كل إطار داخل animate()
+            // (استهلاك لمرة واحدة)، لذلك لا نصفّره هنا عند الرفع حتى لا تُفقد الضغطات السريعة
+            jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isJumpPressed = true; });
+            jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); isJumpPressed = true; });
         }
 
         function initThree() {
             const container = document.getElementById('canvas-container');
-            container.innerHTML = '';
-            gameObjects = [];
-            selectedObject = null;
             
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
@@ -423,148 +477,93 @@
             transform = new TransformControls(camera, renderer.domElement);
             scene.add(transform);
 
-            transform.addEventListener('dragging-changed', (e) => {
-                orbit.enabled = !e.value;
-                if(!e.value) saveCurrentSceneData(); // حفظ التحريك تلقائياً
-            });
+            transform.addEventListener('dragging-changed', (e) => orbit.enabled = !e.value);
 
             const grid = new THREE.GridHelper(30, 30, 0x444444, 0x222222);
             scene.add(grid);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
 
-            updateHierarchyUI();
-            renderInspector();
+            addObject('DirLight');
+            addObject('Floor');
+            addObject('Player');
 
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-            window.addEventListener('keydown', handleKeyDown);
-            window.addEventListener('keyup', handleKeyUp);
+            window.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if(e.code === 'Escape' && isPlaying) stopGamePlay();
+            });
+            window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-            animate(0);
+            animate();
         }
 
-        function handleKeyDown(e) {
-            keys[e.code] = true;
-            if(e.code === 'Escape' && isPlaying) stopGamePlay();
-        }
-        function handleKeyUp(e) { keys[e.code] = false; }
-
-        function addObject(type, savedData = null) {
-            if (type === 'FBX' && !savedData) {
-                document.getElementById('fbx-file-input').click();
-                return;
-            }
-
-            const group = new THREE.Group();
+        function addObject(type, customGroup = null) {
+            const group = customGroup || new THREE.Group();
             let lightObj = null;
             let mesh = null;
 
-            let colorHex = savedData ? savedData.colorHex : (type === 'Floor' ? 0x4caf50 : (type === 'Player' ? 0xff9800 : 0x007acc));
-
-            if (type === 'Cube') mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: colorHex }));
-            else if (type === 'Sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 32), new THREE.MeshStandardMaterial({ color: colorHex }));
-            else if (type === 'Player') { mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 0.8, 4, 8), new THREE.MeshStandardMaterial({ color: colorHex })); }
-            else if (type === 'Floor') { mesh = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 20), new THREE.MeshStandardMaterial({ color: colorHex })); }
-            else if (type === 'DirLight') {
+            if (type === 'Cube') mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x007acc }));
+            else if (type === 'Sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 32), new THREE.MeshStandardMaterial({ color: 0xe91e63 }));
+            else if (type === 'Player') {
+                mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 4, 8), new THREE.MeshStandardMaterial({ color: 0xff9800 }));
+                group.position.y = 3;
+            } else if (type === 'Floor') {
+                mesh = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 20), new THREE.MeshStandardMaterial({ color: 0x4caf50 }));
+                group.position.y = -0.1;
+            } else if (type === 'DirLight') {
                 lightObj = new THREE.DirectionalLight(0xffffff, 1.2);
                 lightObj.position.set(5, 10, 5);
-                group.add(new THREE.DirectionalLightHelper(lightObj, 1));
+                const helper = new THREE.DirectionalLightHelper(lightObj, 1);
+                group.add(helper);
+                group.add(lightObj);
+            } else if (type === 'PointLight') {
+                lightObj = new THREE.PointLight(0xffaa00, 2, 20);
+                lightObj.position.set(0, 3, 0);
+                const helper = new THREE.PointLightHelper(lightObj, 0.5);
+                group.add(helper);
                 group.add(lightObj);
             }
 
             if (mesh) group.add(mesh);
-            
-            if (savedData) {
-                group.position.set(savedData.position.x, savedData.position.y, savedData.position.z);
-                group.rotation.set(savedData.rotation.x, savedData.rotation.y, savedData.rotation.z);
-                group.scale.set(savedData.scale.x, savedData.scale.y, savedData.scale.z);
-            } else {
-                if (type === 'Player') group.position.y = 2;
-                else if (type === 'Floor') group.position.y = -0.1;
-                else if (!lightObj) group.position.y = 1;
-            }
+            if (!customGroup && type !== 'Floor' && !lightObj && type !== 'Player') group.position.y = 1;
             
             scene.add(group);
 
-            const initialScripts = savedData ? savedData.scriptIds : ((type === 'Floor') ? ['sc_solid_ground'] : ((type === 'Player') ? ['sc_player_pc', 'sc_button_controls', 'sc_cam_360'] : []));
+            const initialScripts = type === 'Player' ? ['sc_mobile', 'sc_player', 'sc_solid_ground', 'sc_camera_orbit'] : [];
 
             const go = {
-                id: savedData ? savedData.id : (Date.now() + Math.random()),
-                name: savedData ? savedData.name : `${type}_${gameObjects.length + 1}`,
+                id: Date.now() + Math.random(),
+                name: `${type}_${gameObjects.length + 1}`,
                 group: group,
                 mesh: mesh,
                 light: lightObj,
                 type: type,
-                isSolidGround: savedData ? savedData.isSolidGround : (type === 'Floor'),
-                scriptIds: initialScripts
+                scriptIds: initialScripts,
+                // فيزياء اللاعب (تُستخدم من قبل الجاذبية الأساسية في المحرك)
+                velocityY: 0,
+                grounded: false,
+                // هل هذه الأرضية صلبة؟ (تُستخدم من سكربت SolidGround.js)
+                isSolid: type === 'Floor' ? true : undefined
             };
 
             gameObjects.push(go);
             selectObject(go);
             updateHierarchyUI();
-            saveCurrentSceneData();
         }
 
-        // استيراد FBX
-        document.getElementById('fbx-file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
+        function importFBXFile(file) {
             const reader = new FileReader();
-            reader.onload = function(evt) {
-                const loader = new FBXLoader();
+            reader.onload = function (e) {
                 try {
-                    const fbx = loader.parse(evt.target.result, '');
-                    fbx.scale.set(0.01, 0.01, 0.01);
-
-                    const group = new THREE.Group();
-                    group.add(fbx);
-                    scene.add(group);
-
-                    const go = {
-                        id: Date.now() + Math.random(),
-                        name: file.name.replace('.fbx', ''),
-                        group: group,
-                        mesh: fbx,
-                        type: 'FBX',
-                        isSolidGround: false,
-                        scriptIds: []
-                    };
-
-                    gameObjects.push(go);
-                    selectObject(go);
-                    updateHierarchyUI();
-                    saveCurrentSceneData();
-                } catch(err) {
-                    alert('حدث خطأ أثناء تحميل ملف FBX');
-                    console.error(err);
+                    const fbxGroup = fbxLoader.parse(e.target.result, '');
+                    fbxGroup.scale.setScalar(0.01);
+                    addObject('FBX Model', fbxGroup);
+                } catch (err) {
+                    alert('خطأ في قراءة ملف FBX');
                 }
             };
             reader.readAsArrayBuffer(file);
-        });
-
-        function makeObjectSolid(go) {
-            if(!go) return;
-            go.isSolidGround = true;
-            if(!go.scriptIds) go.scriptIds = [];
-            if(!go.scriptIds.includes('sc_solid_ground')) {
-                go.scriptIds.push('sc_solid_ground');
-            }
-            renderInspector();
-            saveCurrentSceneData();
-            alert(`تم جعل [ ${go.name} ] أرضية صلبة بنجاح!`);
-        }
-
-        function deleteObject(go) {
-            if (!go) return;
-            if (selectedObject === go) selectObject(null);
-            scene.remove(go.group);
-            gameObjects = gameObjects.filter(item => item !== go);
-            updateHierarchyUI();
-            renderInspector();
-            saveCurrentSceneData();
         }
 
         function selectObject(go) {
@@ -575,33 +574,30 @@
             renderInspector();
         }
 
+        let hierarchyFilterText = '';
+        let scriptsFilterText = '';
+
         function updateHierarchyUI() {
             const list = document.getElementById('hierarchy-list');
             list.innerHTML = '';
-            gameObjects.forEach(go => {
-                const item = document.createElement('div');
-                item.className = `tree-item ${selectedObject === go ? 'selected' : ''}`;
-                
-                let icon = 'fa-cube';
-                if (go.type === 'Player') icon = 'fa-person-biking';
-                if (go.type === 'FBX') icon = 'fa-file-import';
-                if (go.type.includes('Light')) icon = 'fa-lightbulb';
+            gameObjects
+                .filter(go => go.name.toLowerCase().includes(hierarchyFilterText.toLowerCase()))
+                .forEach(go => {
+                    const item = document.createElement('div');
+                    item.className = `tree-item ${selectedObject === go ? 'selected' : ''}`;
 
-                item.innerHTML = `
-                    <span><i class="fa-solid ${icon}"></i> ${go.name} ${go.isSolidGround ? '🧱' : ''}</span>
-                    <i class="fa-solid fa-trash del-btn" title="حذف العنصر"></i>
-                `;
-                item.onclick = (e) => {
-                    if(e.target.classList.contains('del-btn')) {
-                        deleteObject(go);
-                    } else {
-                        selectObject(go);
-                    }
-                };
-                list.appendChild(item);
-            });
+                    let icon = 'fa-cube';
+                    if (go.type === 'Player') icon = 'fa-user';
+                    if (go.type.includes('Light')) icon = 'fa-lightbulb';
+                    if (go.type === 'FBX Model') icon = 'fa-file-code';
+
+                    item.innerHTML = `<span><i class="fa-solid ${icon}"></i> ${go.name}</span>`;
+                    item.onclick = () => selectObject(go);
+                    list.appendChild(item);
+                });
         }
 
+        // --- Inspector & Project Settings ---
         function renderInspector() {
             const content = document.getElementById('inspector-content');
             content.innerHTML = '';
@@ -609,74 +605,31 @@
             if (activeTab === 'settings') {
                 content.innerHTML = `
                     <div class="prop-group">
-                        <div class="prop-title"><i class="fa-solid fa-sliders"></i> Project Settings</div>
-                        <div class="prop-row"><label>اسم اللعبة</label><input type="text" id="set-game-name" value="${currentProj ? currentProj.name : ''}"></div>
-                        <button class="btn active" id="btn-save-name" style="width:100%; justify-content:center; margin-bottom:10px;"><i class="fa-solid fa-check"></i> حفظ اسم اللعبة</button>
-                        
-                        <div class="prop-row">
-                            <label>سلاسة اللعبة (FPS)</label>
-                            <select id="set-game-fps">
-                                <option value="60" ${currentProj && currentProj.fpsLimit == 60 ? 'selected' : ''}>سلس جداً (60 FPS)</option>
-                                <option value="30" ${currentProj && currentProj.fpsLimit == 30 ? 'selected' : ''}>متوسط (30 FPS)</option>
-                                <option value="15" ${currentProj && currentProj.fpsLimit == 15 ? 'selected' : ''}>منخفض (15 FPS)</option>
-                            </select>
-                        </div>
-                        <button class="btn active" id="btn-save-fps" style="width:100%; justify-content:center; margin-bottom:10px;"><i class="fa-solid fa-bolt"></i> تطبيق السلاسة</button>
-
-                        <div class="prop-row"><label>شعار/صورة اللعبة</label><input type="file" id="set-game-icon" accept="image/*"></div>
-                        <button class="btn btn-green" id="btn-download-apk" style="width:100%; justify-content:center; margin-top:15px; padding:10px;"><i class="fa-solid fa-android"></i> تحميل اللعبة APK</button>
+                        <div class="prop-title">إعدادات المشهد والعالم</div>
+                        <div class="prop-row"><label>اسم اللعبة</label><input type="text" id="set-name" value="${currentProj ? currentProj.name : ''}"></div>
+                        <div class="prop-row"><label>لون السماء</label><input type="color" id="set-sky" value="#87ceeb"></div>
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-title">تصدير وبناء اللعبة (Export Game)</div>
+                        <p style="font-size:11px; color:#aaa; margin-bottom:8px;">تصدير مشروعك للعمل على الهواتف والكمبيوتر:</p>
+                        <button class="btn btn-green" id="btn-export-apk" style="width:100%; margin-bottom:6px; justify-content:center;"><i class="fa-brands fa-android"></i> تحميل ملف اللعبة للأنشطة (APK Build)</button>
+                        <button class="btn btn-green" id="btn-export-exe" style="width:100%; justify-content:center; background:#007acc;"><i class="fa-brands fa-windows"></i> تحميل ملف اللعبة للويندوز (EXE Build)</button>
                     </div>
                 `;
-
-                document.getElementById('btn-save-name').onclick = () => {
-                    const newName = document.getElementById('set-game-name').value;
-                    if(newName && currentProj) {
-                        currentProj.name = newName;
-                        document.getElementById('proj-title-display').innerText = newName;
-                        saveProjects();
-                        alert('تم تحديث اسم اللعبة بنجاح!');
-                    }
-                };
-
-                document.getElementById('btn-save-fps').onclick = () => {
-                    const fpsVal = parseInt(document.getElementById('set-game-fps').value);
-                    if(currentProj) {
-                        currentProj.fpsLimit = fpsVal;
-                        saveProjects();
-                        alert(`تم ضبط سلاسة اللعبة على ${fpsVal} FPS!`);
-                    }
-                };
-
-                document.getElementById('set-game-icon').onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(evt) {
-                            if(currentProj) {
-                                currentProj.icon = evt.target.result;
-                                saveProjects();
-                                alert('تم حفظ صورة اللعبة بنجاح!');
-                            }
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                };
-
-                document.getElementById('btn-download-apk').onclick = () => exportToAPK();
+                document.getElementById('set-sky').oninput = (e) => scene.background.set(e.target.value);
+                
+                // تنزيل حزمة اللعبة للتطبيقات والويندوز
+                document.getElementById('btn-export-apk').onclick = () => exportGamePackage('APK');
+                document.getElementById('btn-export-exe').onclick = () => exportGamePackage('EXE');
                 return;
             }
 
             if (!selectedObject) {
-                content.innerHTML = '<div style="color:#777; text-align:center; padding-top:20px;">قم بتحديد عنصر للتحكم به</div>';
+                content.innerHTML = '<div style="color:#777; text-align:center; padding-top:20px;">قم بتحديد مجسم لتعديله</div>';
                 return;
             }
 
             const go = selectedObject;
-
-            let currentColorHex = "#007acc";
-            if (go.mesh && go.mesh.material && go.mesh.material.color) {
-                currentColorHex = "#" + go.mesh.material.color.getHexString();
-            }
 
             let scriptsTagsHTML = '';
             if (go.scriptIds && go.scriptIds.length > 0) {
@@ -702,17 +655,48 @@
                 }
             });
 
+            const solidRowHTML = go.type === 'Floor' ? `
+                <div class="prop-group">
+                    <div class="prop-title">فيزياء الأرضية</div>
+                    <div class="prop-row">
+                        <label>أرضية صلبة</label>
+                        <input type="checkbox" id="obj-solid" style="width:auto;" ${go.isSolid !== false ? 'checked' : ''}>
+                    </div>
+                </div>
+            ` : '';
+
+            let colorRowHTML = '';
+            if (go.mesh && go.mesh.material && go.mesh.material.color) {
+                colorRowHTML = `
+                    <div class="prop-group">
+                        <div class="prop-title">المظهر (Appearance)</div>
+                        <div class="prop-row">
+                            <label>لون الشكل</label>
+                            <input type="color" id="obj-color" value="#${go.mesh.material.color.getHexString()}">
+                        </div>
+                    </div>
+                `;
+            } else if (go.light && go.light.color) {
+                colorRowHTML = `
+                    <div class="prop-group">
+                        <div class="prop-title">المظهر (Appearance)</div>
+                        <div class="prop-row">
+                            <label>لون الإضاءة</label>
+                            <input type="color" id="obj-color" value="#${go.light.color.getHexString()}">
+                        </div>
+                    </div>
+                `;
+            }
+
             content.innerHTML = `
                 <div class="prop-group">
-                    <div class="prop-title">Transform & Attributes</div>
+                    <div class="prop-title">Transform</div>
                     <div class="prop-row"><label>الاسم</label><input type="text" id="obj-name" value="${go.name}"></div>
-                    <div class="prop-row"><label>لون المجسم</label><input type="color" id="obj-color" value="${currentColorHex}"></div>
-                    <div class="prop-row"><label>حالة الصلابة</label><span style="font-weight:bold; color:${go.isSolidGround ? '#2ecc71' : '#f14c4c'}">${go.isSolidGround ? 'صلب (Solid)' : 'غير صلب'}</span></div>
-                    <button class="btn btn-green" id="btn-make-solid" style="width:100%; justify-content:center; margin-top:6px; margin-bottom:6px;"><i class="fa-solid fa-cubes-stacked"></i> تفعيل كأرضية صلبة</button>
-                    <button class="btn btn-danger" id="btn-delete-obj" style="width:100%; justify-content:center; margin-top:4px;"><i class="fa-solid fa-trash"></i> مسح هذا العنصر</button>
                 </div>
+                ${colorRowHTML}
+                ${solidRowHTML}
                 <div class="prop-group">
-                    <div class="prop-title">Scripts Components</div>
+                    <div class="prop-title">Scripts Components (السكربتات)</div>
                     <div id="attached-scripts-list">${scriptsTagsHTML}</div>
                     <div class="prop-row" style="margin-top:8px;">
                         <select id="select-add-script">${availableOptions}</select>
@@ -720,22 +704,26 @@
                 </div>
             `;
 
-            document.getElementById('obj-name').oninput = (e) => { go.name = e.target.value; updateHierarchyUI(); saveCurrentSceneData(); };
-            
-            document.getElementById('obj-color').oninput = (e) => {
-                const colorHex = e.target.value;
-                if (go.mesh) {
-                    go.mesh.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            child.material.color.set(colorHex);
-                        }
-                    });
-                }
-                saveCurrentSceneData();
+            document.getElementById('obj-name').oninput = (e) => {
+                go.name = e.target.value;
+                updateHierarchyUI();
             };
 
-            document.getElementById('btn-make-solid').onclick = () => makeObjectSolid(go);
-            document.getElementById('btn-delete-obj').onclick = () => deleteObject(go);
+            if (document.getElementById('obj-color')) {
+                document.getElementById('obj-color').oninput = (e) => {
+                    if (go.mesh && go.mesh.material && go.mesh.material.color) {
+                        go.mesh.material.color.set(e.target.value);
+                    } else if (go.light && go.light.color) {
+                        go.light.color.set(e.target.value);
+                    }
+                };
+            }
+
+            if (go.type === 'Floor') {
+                document.getElementById('obj-solid').onchange = (e) => {
+                    go.isSolid = e.target.checked;
+                };
+            }
 
             document.getElementById('select-add-script').onchange = (e) => {
                 const scId = e.target.value;
@@ -743,7 +731,6 @@
                     if (!go.scriptIds) go.scriptIds = [];
                     go.scriptIds.push(scId);
                     renderInspector();
-                    saveCurrentSceneData();
                 }
             };
 
@@ -752,35 +739,60 @@
                     const scId = e.currentTarget.getAttribute('data-id');
                     go.scriptIds = go.scriptIds.filter(id => id !== scId);
                     renderInspector();
-                    saveCurrentSceneData();
                 };
             });
         }
 
-        function exportToAPK() {
-            const htmlContent = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${currentProj.name}</title></head><body style="margin:0;overflow:hidden;background:#000;"><h1 style="color:white;text-align:center;padding-top:20%;">APK Application Package for ${currentProj.name}</h1></body></html>`;
-            const blob = new Blob([htmlContent], { type: 'application/vnd.android.package-archive' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `${currentProj.name.replace(/\s+/g, '_')}.apk`;
-            link.click();
+        function exportGamePackage(type) {
+            const gameData = document.documentElement.outerHTML;
+            const blob = new Blob([gameData], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${currentProj ? currentProj.name : 'Apex_Game'}_${type}_Package.html`;
+            a.click();
+            alert(`تم تحضير الملف كحزمة شفرة مصدريّة لـ (${type})!\nيمكنك تشغيله عبر منصات التغليف مثل Cordova/Website2APK للهواتف أو Electron للكمبيوتر.`);
         }
 
+        // --- إدارة وحذف السكربتات (Scripts Manager with Delete) ---
         function renderScriptsUI() {
             const container = document.getElementById('scripts-list');
             container.innerHTML = '';
-            scripts.forEach(sc => {
-                const item = document.createElement('div');
-                item.style.cssText = 'background: var(--bg-medium); padding: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;';
-                item.innerHTML = `
-                    <span><i class="fa-solid fa-scroll"></i> ${sc.name}</span>
-                    <div style="display:flex; gap:4px;">
-                        <button class="btn btn-edit" style="padding: 2px 6px;"><i class="fa-solid fa-pen-to-square"></i></button>
-                    </div>
-                `;
-                item.querySelector('.btn-edit').onclick = () => openScriptModal(sc);
-                container.appendChild(item);
-            });
+            const folderRow = document.createElement('div');
+            folderRow.style.cssText = 'color:#8a8f9c; padding:4px 2px; display:flex; align-items:center; gap:6px;';
+            folderRow.innerHTML = '<i class="fa-solid fa-folder-open" style="color:#e8c56a;"></i> res://scripts/';
+            container.appendChild(folderRow);
+
+            scripts
+                .filter(sc => sc.name.toLowerCase().includes(scriptsFilterText.toLowerCase()))
+                .forEach(sc => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'background: var(--bg-medium); padding: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;';
+                    item.innerHTML = `
+                        <span><i class="fa-solid fa-scroll" style="color:#6fa8dc;"></i> ${sc.name}</span>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn btn-edit" style="padding: 2px 6px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn btn-del-sc" style="padding: 2px 6px; color: var(--stop-color);"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    item.querySelector('.btn-edit').onclick = () => openScriptModal(sc);
+                    item.querySelector('.btn-del-sc').onclick = () => deleteScript(sc.id);
+                    container.appendChild(item);
+                });
+        }
+
+        function deleteScript(scriptId) {
+            if (confirm("هل أنت تأكد من إزالة هذا السكربت نهائياً؟")) {
+                // إزالة السكربت من القائمة الرئيسية
+                scripts = scripts.filter(s => s.id !== scriptId);
+                // إزالته من كافة الكائنات والمجسمات المربوط بها
+                gameObjects.forEach(go => {
+                    if (go.scriptIds) {
+                        go.scriptIds = go.scriptIds.filter(id => id !== scriptId);
+                    }
+                });
+                renderScriptsUI();
+                renderInspector();
+            }
         }
 
         function openScriptModal(sc = null) {
@@ -791,52 +803,76 @@
         }
 
         function startGamePlay() {
-            saveCurrentSceneData();
+            // عرض صفحة التحميل اللودينغ لشعار Apex Engine
+            const splash = document.getElementById('splash-screen');
+            splash.style.display = 'flex';
+            splash.style.opacity = '1';
+
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => { splash.style.display = 'none'; }, 500);
+            }, 1200);
+
             isPlaying = true;
-            orbit.enabled = false;
             document.body.classList.add('playing');
-
-            const hasButtonScript = gameObjects.some(go => go.scriptIds && go.scriptIds.includes('sc_button_controls'));
-            if(hasButtonScript) {
-                document.body.classList.add('has-button-script');
-            } else {
-                document.body.classList.remove('has-button-script');
-            }
-
             transform.detach();
+            orbit.enabled = false; // نطفئ الأورو-بت أثناء اللعب حتى لا يتعارض مع سكربتات الكاميرا
             resize();
+
+            // إصلاح الجويستيك: يجب إنشاؤه بعد ظهور طبقة #mobile-ui فعلياً على الشاشة
+            // (كان يُنشأ سابقاً وهو مخفي display:none فيحصل على أبعاد صفر ويتعطل)
             initJoystick();
         }
 
         function stopGamePlay() {
             isPlaying = false;
-            orbit.enabled = true;
             document.body.classList.remove('playing');
-            document.body.classList.remove('has-button-script');
             if(selectedObject) transform.attach(selectedObject.group);
+            orbit.enabled = true;
             resize();
         }
 
-        function animate(currentTime) {
+        const GRAVITY_ACCEL = 0.015; // ثابت تسارع الجاذبية الأساسي في المحرك
+
+        // يحسب أعلى نقطة لأقرب أرضية صلبة (Floor) أسفل إحداثيات (x, z) المُعطاة
+        // يُعيد -Infinity إن لم توجد أي أرضية صلبة تحت هذه النقطة (أي: لا قاع، السقوط مستمر)
+        function getGroundY(x, z) {
+            let best = -Infinity;
+            gameObjects.forEach(o => {
+                if (o.type === 'Floor' && o.isSolid !== false && o.mesh) {
+                    const box = new THREE.Box3().setFromObject(o.mesh);
+                    if (x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z) {
+                        if (box.max.y > best) best = box.max.y;
+                    }
+                }
+            });
+            return best;
+        }
+
+        function animate() {
             requestAnimationFrame(animate);
 
-            // التحكم في السلاسة وعدد الإطارات (FPS Limit)
-            const fpsLimit = (currentProj && currentProj.fpsLimit) ? currentProj.fpsLimit : 60;
-            const interval = 1000 / fpsLimit;
-            const delta = currentTime - lastFrameTime;
-
-            if (delta < interval) return;
-            lastFrameTime = currentTime - (delta % interval);
-
             if (isPlaying) {
+                // 1) جاذبية أساسية مدمجة في المحرك: تُطبَّق تلقائياً على كل كائن Player
+                //    بغض النظر عن السكربتات المربوطة به. سكربت SolidGround.js هو من
+                //    يوقفها إن وُجدت أرضية صلبة حقيقية تحت اللاعب.
+                gameObjects.forEach(go => {
+                    if (go.type === 'Player') {
+                        if (typeof go.velocityY !== 'number') go.velocityY = 0;
+                        go.velocityY -= GRAVITY_ACCEL;
+                        go.group.position.y += go.velocityY;
+                    }
+                });
+
+                // 2) تشغيل السكربتات المربوطة بكل كائن (حركة، أرض صلبة، كاميرا...)
                 gameObjects.forEach(go => {
                     if (go.scriptIds && go.scriptIds.length > 0) {
                         go.scriptIds.forEach(scId => {
                             const script = scripts.find(s => s.id === scId);
                             if (script && script.code) {
                                 try {
-                                    const scriptFunc = new Function('go', 'keys', 'joystickVector', 'isJumpTriggered', 'camTouchYaw', 'camTouchPitch', 'THREE', 'gameObjects', 'scene', 'camera', script.code);
-                                    scriptFunc(go, keys, joystickVector, isJumpTriggered, camTouchYaw, camTouchPitch, THREE, gameObjects, scene, camera);
+                                    const scriptFunc = new Function('go', 'keys', 'joystickVector', 'isJumpPressed', 'THREE', 'camera', 'scene', 'getGroundY', script.code);
+                                    scriptFunc(go, keys, joystickVector, isJumpPressed, THREE, camera, scene, getGroundY);
                                 } catch (e) {
                                     console.error("Script Error:", e);
                                 }
@@ -844,10 +880,15 @@
                         });
                     }
                 });
-            } else {
-                orbit.update();
+
+                // 3) استهلاك ضغطة القفز لمرة واحدة فقط في هذا الإطار
+                isJumpPressed = false;
             }
 
+            // إصلاح: OrbitControls.update() يعيد فرض موضع الكاميرا من حالته الداخلية
+            // في كل إطار حتى لو enabled=false، ما كان يُلغي عمل سكربت الكاميرا.
+            // لذلك نستدعيه فقط في وضع التحرير (خارج اللعب).
+            if (!isPlaying) orbit.update();
             renderer.render(scene, camera);
         }
 
@@ -863,24 +904,16 @@
             renderDashboard();
 
             document.getElementById('btn-create-proj').onclick = () => {
-                const name = prompt('أدخل اسم اللعبة الجديد:', 'لعبة جديدة');
+                const name = prompt('أدخل اسم المشروع الجديد:', 'مشروع جديد');
                 if (name) {
-                    const newProj = { id: 'p_' + Date.now(), name: name, icon: '', fpsLimit: 60, sceneObjects: [] };
-                    projects.push(newProj);
+                    projects.push({ id: 'p_' + Date.now(), name });
                     saveProjects();
-                    openEngine(newProj);
                 }
             };
 
             document.getElementById('btn-back').onclick = () => {
-                saveCurrentSceneData();
                 document.getElementById('engine-editor').style.display = 'none';
                 document.getElementById('projects-dashboard').style.display = 'flex';
-            };
-
-            document.getElementById('btn-save-scene').onclick = () => {
-                saveCurrentSceneData();
-                alert('تم حفظ المشهد وجميع المجسمات بنجاح! 💾');
             };
 
             document.getElementById('tool-translate').onclick = () => transform.setMode('translate');
@@ -890,13 +923,28 @@
             document.getElementById('tab-inspector').onclick = () => { activeTab = 'inspector'; renderInspector(); };
             document.getElementById('tab-settings').onclick = () => { activeTab = 'settings'; renderInspector(); };
 
+            // مربعات الفلترة بمظهر Godot (Filter by Name / Filter Files)
+            document.getElementById('hierarchy-filter').oninput = (e) => {
+                hierarchyFilterText = e.target.value;
+                updateHierarchyUI();
+            };
+            document.getElementById('scripts-filter').oninput = (e) => {
+                scriptsFilterText = e.target.value;
+                renderScriptsUI();
+            };
+
             const addDropdown = document.getElementById('add-menu-dropdown');
             document.getElementById('btn-open-add').onclick = (e) => { e.stopPropagation(); addDropdown.classList.toggle('show'); };
             window.onclick = () => addDropdown.classList.remove('show');
 
             addDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                if (item.id === 'btn-import-fbx') return;
                 item.onclick = (e) => addObject(e.currentTarget.getAttribute('data-type'));
             });
+
+            const fbxInput = document.getElementById('fbx-file-input');
+            document.getElementById('btn-import-fbx').onclick = () => fbxInput.click();
+            fbxInput.onchange = (e) => { if (e.target.files.length) importFBXFile(e.target.files[0]); };
 
             document.getElementById('btn-new-script').onclick = () => openScriptModal();
             document.getElementById('btn-cancel-script').onclick = () => document.getElementById('script-modal').style.display = 'none';
